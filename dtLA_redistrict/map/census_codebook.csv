@@ -1,0 +1,12 @@
+my_cen_var_names,my_cen_vars,description,var_name
+limited_english_totpop,C16001_001,Denominator for limited_english,# Limited English
+total_population,B06001_001,Total population,Total Population
+white_only,B01001A_001,People who are White alone,# White Alone
+foreign_born,B06001_049,Foreign born,# Foreign Born
+aa_pop,B01001B_001,BLACK OR AFRICAN AMERICAN ALONE,# African American Alone
+api_pop,B01001E_001,People who are Native Hawaiian and Other Pacific Islander alone,# API
+asian_pop,B01001D_001,People who are Asian alone,# Asian Alone
+hispanic_pop,B01001I_001,Hispanic or Latino population,# Latinx Alone
+poverty_number,B06012_002,Below 100 Percent of the Poverty Level,# Under 100% Poverty Level
+renter_number,B25008_002,Total population in occupied housing units-renter owner,# Renter
+medi_income,B19013_001,Median Income,Median Income
