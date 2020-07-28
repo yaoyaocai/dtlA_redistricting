@@ -54,7 +54,8 @@ ui <- bootstrapPage(
                                                        choices = sort(as.character(exp_census$census), decreasing = F),
                                                        options = list(placeholder = "Select Tracts", 'plugins' = list('remove_button'))
                                         ),
-                                        span(h4(htmlOutput("la_change"), align = "left"), style="color:#270180")
+                                        span(h4(htmlOutput("la_change"), align = "left"), style="color:#270180"),
+                                        span(h6(htmlOutput("author"), align = "left"))
                                         
                           ),
                           absolutePanel(id = "controls", class = "panel panel-default",
@@ -62,9 +63,11 @@ ui <- bootstrapPage(
                                         draggable = TRUE, height = "auto",
                                         span(h4(htmlOutput("pro"), align = "left"), style="color:#270180"))
                                         
+                                        
                           ),
                           absolutePanel(id = "logo", class = "card", bottom = 20, left = 60, width = 120, fixed=TRUE, draggable = FALSE, height = "auto",
                                         tags$a(href='https://www.ccala.org/', tags$img(src='logo.png',height='110',width='110')))
+                      
                           
                       )
              )
@@ -180,6 +183,11 @@ server <- function(input, output, session) {
       paste0("")
     }
     })
+  
+  output$author <- renderText({
+      paste0("Powered by Yaoyao Cai and Cheng Ren")
+    
+  })
   output$la_change <- renderText({
     if(!is.null(input$select_tract)){
       right_lay = la_census %>% filter(census%in%c(input$select_tract))
