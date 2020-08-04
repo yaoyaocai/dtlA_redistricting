@@ -50,9 +50,10 @@ ui <- bootstrapPage(
                                                     choicesOpt = list(
                                                       style = rep(("color:black; font-size: 110%;"), 56)),
                                                     options = list(liveSearch = TRUE)),
-                                        selectizeInput("select_tract",label = "Tract Selection", multiple = T,
+                                        selectizeInput("select_tract",label = "Tract Selection", multiple = TRUE,
+                                                       selected = NULL,
                                                        choices = sort(as.character(la_census$census), decreasing = F),width='100%',
-                                                       options = list(placeholder = "Select Tracts", 'plugins' = list('remove_button'))
+                                                       options = list(maxItems = 9999,placeholder = "Select Tracts", 'plugins' = list('remove_button'))
                                         ),
                                         span(h4(htmlOutput("la_change"), align = "left"), style="color:#270180"),
                                         span(h6(htmlOutput("author"), align = "left"))
@@ -98,14 +99,14 @@ server <- function(input, output, session) {
       hideGroup("Neighborhood") %>%
       addPolylines(data = dtla,
                    weight=5,
-                   color = 'purple',
+                   color = 'royalblue',
                    group = 'Downtown',
                    opacity = 0.8,
                    options = pathOptions(pane = "Downtown"))%>%
       addPolygons(data = council,
                   fillColor ='#00000',
                   fillOpacity = 0,
-                   weight = 6,
+                   weight = 4,
                    color = 'green',
                    group = 'Council',
                    opacity = 0.8,
@@ -114,7 +115,7 @@ server <- function(input, output, session) {
       addPolygons(data = neigh,
                   fillColor ='#00000',
                   fillOpacity = 0,
-                   weight = 6,
+                   weight = 4,
                    color = 'orange',
                    group = 'Neighborhood',
                    opacity = 0.8,
@@ -123,7 +124,9 @@ server <- function(input, output, session) {
       addPolygons(data = la_census,
                   fillColor ='grey',
                   fillOpacity = 0.5,
-                  weight = 3,
+                  highlightOptions = highlightOptions(stroke = 4, weight = 3,
+                                                      color = 'black'),
+                  weight = 2,
                   color = 'grey',
                   group = 'Base Tract',
                   opacity = 0.8,
@@ -189,13 +192,15 @@ server <- function(input, output, session) {
     
     cat(file=stderr(), "Observed Geography Click", "\n")
     
-    # if(!is.null(data_of_click$clickedGeography$id)){
-    #   right_lay = la_census %>% filter(GEOID==data_of_click$clickedGeography$id)
-    #   cs <- c(right_lay['census'])
-    #   right_lay_g <- c(right_lay_g,cs)
-    #   print(right_lay_g$census)
-    #   updateSelectizeInput(session,"select_tract", 
-    #                     selected=c(right_lay_g,cs))}
+    if(!is.null(data_of_click$clickedGeography$id)){
+      right_lay = la_census %>% filter(GEOID==data_of_click$clickedGeography$id)
+      cs <- c(right_lay['census'])
+      right_lay_g <- c(right_lay_g,cs)
+      print(right_lay_g$census)
+      st=input$select_tract
+      updateSelectizeInput(session,"select_tract",
+                        selected=c(st,right_lay_g))
+      }
     
   })
   
@@ -308,6 +313,8 @@ server <- function(input, output, session) {
                                    fillOpacity = 0.7,
                                    color = "grey",
                                    weight = 2,
+                                   highlightOptions = highlightOptions(stroke = 4, weight = 3,
+                                                                       color = 'black'),
                                    layerId = ~NAME,
                                    popup = ~census,
                                    options = pathOptions(pane = "Tract"))
