@@ -202,7 +202,11 @@ server <- function(input, output, session) {
   
   output$pro <- renderText({
     if(!is.null(data_of_click$clickedGeography$id)){
-      right_lay = la_census %>% filter(GEOID==data_of_click$clickedGeography$id)
+      if(nchar(data_of_click$clickedGeography$id)==11){
+        right_lay = la_census %>% filter(GEOID==data_of_click$clickedGeography$id)}
+      else{
+        right_lay = la_census %>% filter(NAME==data_of_click$clickedGeography$id)
+      }
       HTML(paste(paste0('Census Tract: ',right_lay$census),
                  paste0('Total Population: ',right_lay$total_population),
                  #paste0('# Limited English: ',right_lay$limited_english_totpop), 
@@ -304,7 +308,7 @@ server <- function(input, output, session) {
                                    fillOpacity = 0.7,
                                    color = "grey",
                                    weight = 2,
-                                   layerId = ~GEOID,
+                                   layerId = ~NAME,
                                    popup = ~census,
                                    options = pathOptions(pane = "Tract"))
                         
