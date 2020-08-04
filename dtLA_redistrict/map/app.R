@@ -46,7 +46,7 @@ ui <- bootstrapPage(
                                         #img(src="logo.png",height=37,width=110,align = "left"),
                                         pickerInput("select_layer", label = h4("Layer Selection"), inline = F, 
                                                     selected = "Nothing",width='100%',
-                                                    choices = sort(c('Nothing',unique(as.character(census$var_name)))),
+                                                    choices = sort(c(unique(as.character(census$var_name)))),
                                                     choicesOpt = list(
                                                       style = rep(("color:black; font-size: 110%;"), 56)),
                                                     options = list(liveSearch = TRUE)),
@@ -166,8 +166,8 @@ server <- function(input, output, session) {
       return(colorQuantile("Purples", la_census$asian_pop, n=6))}
     if(input$select_layer == '# Foreign Born'){
       return(colorQuantile("Purples", la_census$foreign_born, n=6))}
-    if(input$select_layer == '# Latix Alone'){
-      return(colorQuantile("Purples", la_census$hispanic_pop, n=6))}
+    if(input$select_layer == '# Latinx Alone'){
+      return(colorQuantile("Purples", la_census$hispanic_pop, n=5))}
     if(input$select_layer == '# Renter'){
       return(colorQuantile("Purples", la_census$renter_number, n=6))}
     if(input$select_layer == '# Under 100% Poverty Level'){
@@ -263,8 +263,9 @@ server <- function(input, output, session) {
   observeEvent(list(input$select_layer,
                     input$select_tract),{
                       leafletProxy("main_map") %>%
-                        clearGroup('Donwtown') %>%
+                        #clearGroup('Donwtown') %>%
                         clearGroup("Tract") %>%
+                        #clearGroup("Base Tract") %>%
                         # addPolygons(data = update_dataset(),
                         #             fillColor = ~quantcolors()(
                         #               if(input$select_layer == 'Total Population'){total_population}
@@ -294,7 +295,7 @@ server <- function(input, output, session) {
                                      else if(input$select_layer == '# API'){api_pop}
                                      else if(input$select_layer == '# Asian Alone'){asian_pop}
                                      #else if(input$select_layer == '# Foreign Born'){foreign_born}
-                                     else if(input$select_layer == '# Latix Alone'){hispanic_pop}
+                                     else if(input$select_layer == '# Latinx Alone'){hispanic_pop}
                                      #else if(input$select_layer == '# Renter'){renter_number}
                                      #else if(input$select_layer == '# Under 100% Poverty Level'){poverty_number}
                                      else if(input$select_layer == 'Median Income'){medi_income}
