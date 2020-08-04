@@ -41,17 +41,17 @@ ui <- bootstrapPage(
                           leafletOutput("main_map", width="100%", height="100%"),
                           
                           absolutePanel(id = "controls", class = "panel panel-default",
-                                        top = 100, left = 55, width = 350, fixed=TRUE,
-                                        draggable = FALSE, height = 500,
+                                        top = 100, left = 55, width = 470, fixed=TRUE,
+                                        draggable = FALSE, height = 'auto',
                                         #img(src="logo.png",height=37,width=110,align = "left"),
                                         pickerInput("select_layer", label = h4("Layer Selection"), inline = F, 
-                                                    selected = "Total Population",
+                                                    selected = "Total Population",width='100%',
                                                     choices = sort(c(unique(as.character(census$var_name)))),
                                                     choicesOpt = list(
                                                       style = rep(("color:black; font-size: 110%;"), 56)),
                                                     options = list(liveSearch = TRUE)),
                                         selectizeInput("select_tract",label = "Tract Selection", multiple = T,
-                                                       choices = sort(as.character(exp_census$census), decreasing = F),
+                                                       choices = sort(as.character(exp_census$census), decreasing = F),width='100%',
                                                        options = list(placeholder = "Select Tracts", 'plugins' = list('remove_button'))
                                         ),
                                         span(h4(htmlOutput("la_change"), align = "left"), style="color:#270180"),
@@ -65,7 +65,7 @@ ui <- bootstrapPage(
                                         
                                         
                           ),
-                          absolutePanel(id = "logo", class = "card", bottom = 20, left = 60, width = 120, fixed=TRUE, draggable = FALSE, height = "auto",
+                          absolutePanel(id = "logo", class = "card", bottom = 210, right = 20, width = 120, fixed=TRUE, draggable = FALSE, height = "auto",
                                         tags$a(href='https://www.ccala.org/', tags$img(src='logo.png',height='110',width='110')))
                       
                           
