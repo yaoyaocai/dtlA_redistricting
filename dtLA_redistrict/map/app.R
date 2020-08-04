@@ -45,13 +45,13 @@ ui <- bootstrapPage(
                                         draggable = FALSE, height = 'auto',
                                         #img(src="logo.png",height=37,width=110,align = "left"),
                                         pickerInput("select_layer", label = h4("Layer Selection"), inline = F, 
-                                                    selected = "Total Population",width='100%',
-                                                    choices = sort(c(unique(as.character(census$var_name)))),
+                                                    selected = "Nothing",width='100%',
+                                                    choices = sort(c('Nothing',unique(as.character(census$var_name)))),
                                                     choicesOpt = list(
                                                       style = rep(("color:black; font-size: 110%;"), 56)),
                                                     options = list(liveSearch = TRUE)),
                                         selectizeInput("select_tract",label = "Tract Selection", multiple = T,
-                                                       choices = sort(as.character(exp_census$census), decreasing = F),width='100%',
+                                                       choices = sort(as.character(la_census$census), decreasing = F),width='100%',
                                                        options = list(placeholder = "Select Tracts", 'plugins' = list('remove_button'))
                                         ),
                                         span(h4(htmlOutput("la_change"), align = "left"), style="color:#270180"),
@@ -65,7 +65,7 @@ ui <- bootstrapPage(
                                         
                                         
                           ),
-                          absolutePanel(id = "logo", class = "card", bottom = 210, right = 20, width = 120, fixed=TRUE, draggable = FALSE, height = "auto",
+                          absolutePanel(id = "logo", class = "card", bottom = 270, right = 20, width = 120, fixed=TRUE, draggable = FALSE, height = "auto",
                                         tags$a(href='https://www.ccala.org/', tags$img(src='logo.png',height='110',width='110')))
                       
                           
@@ -84,27 +84,54 @@ server <- function(input, output, session) {
       # 
       addMapPane("line", zIndex=420) %>%
       # 
-      addMapPane("Council", zIndex = 410)%>%
-      addMapPane("Downtown", zIndex = 405)%>%
-      addMapPane("Tract", zIndex = 400) %>%   # Pane z-Index for polygons to stay underneath the markers
+      addMapPane("Council", zIndex = 408)%>%
+      addMapPane("Neighborhood", zIndex = 405)%>%
+      addMapPane("Downtown", zIndex = 401)%>%
+      addMapPane("Tract", zIndex = 410) %>%
+      addMapPane("Base Tract", zIndex = 400) %>%# Pane z-Index for polygons to stay underneath the markers
       #
       addLayersControl(
-        baseGroups = c("Street Basemap","Plain Basemap"), 
-        overlayGroups = c('Tract','Downtown','Council'),
+        baseGroups = c("Plain Basemap","Street Basemap"), 
+        overlayGroups = c('Tract','Council','Neighborhood','Downtown','Base Tract'),
         options = layersControlOptions(collapsed = F, autoZIndex = TRUE),
         position = "bottomright")  %>%
+      hideGroup("Neighborhood") %>%
       addPolylines(data = dtla,
                    weight=5,
                    color = 'purple',
                    group = 'Downtown',
                    opacity = 0.8,
                    options = pathOptions(pane = "Downtown"))%>%
-      addPolylines(data = council,
+      addPolygons(data = council,
+                  fillColor ='#00000',
+                  fillOpacity = 0,
                    weight = 6,
                    color = 'green',
                    group = 'Council',
                    opacity = 0.8,
-                   options = pathOptions(pane = "Council"))
+                   popup = ~paste('District',district, sep = ' '),
+                   options = pathOptions(pane = "Council"))%>%
+      addPolygons(data = neigh,
+                  fillColor ='#00000',
+                  fillOpacity = 0,
+                   weight = 6,
+                   color = 'orange',
+                   group = 'Neighborhood',
+                   opacity = 0.8,
+                   popup = ~name,
+                   options = pathOptions(pane = "Neighborhood"))%>%
+      addPolygons(data = la_census,
+                  fillColor ='grey',
+                  fillOpacity = 0.5,
+                  weight = 3,
+                  color = 'grey',
+                  group = 'Base Tract',
+                  opacity = 0.8,
+                  popup = ~census,
+                  layerId = ~GEOID,
+                  options = pathOptions(pane = "Base Tract"))
+    
+
     
     
     return(map1)
@@ -113,18 +140,20 @@ server <- function(input, output, session) {
   output$main_map <- renderLeaflet({make_leaflet_map()})
   
   #update the dataset
-  update_dataset <- reactive({
-    var <- as.character(census$my_cen_var_names[census$var_name==input$select_layer])
-    data_set <- dt_census %>% select("GEOID","NAME",'census',var)
-    return(data_set)})
+  # update_dataset <- reactive({
+  #   var <- as.character(census$my_cen_var_names[census$var_name==input$select_layer])
+  #   data_set <- dt_census %>% select("GEOID","NAME",'census',var)
+  #   return(data_set)})
   #update the census
   update_dataset_census <- reactive({
     var <- as.character(census$my_cen_var_names[census$var_name==input$select_layer])
-    data_set_census <- exp_census %>% select("GEOID","NAME",'census',var)%>%
+    data_set_census <- la_census %>% select("GEOID","NAME",'census',var)%>%
       filter(census%in%c(input$select_tract) )
     return(data_set_census)})
   # fill colors
   quantcolors <- reactive({
+    if(input$select_layer == 'Nothing'){
+      return(colorBin("purple", domain = 1))}
     if(input$select_layer == 'Total Population'){
       return(colorQuantile("Purples",la_census$total_population, n=6))}
     if(input$select_layer == '# Limited English'){
@@ -152,6 +181,7 @@ server <- function(input, output, session) {
   #### layer click #### 
   # Geography click
   data_of_click <- reactiveValues(clickedMarker = NULL, clickedGeography = NULL)
+  right_lay_g <- c()
   observeEvent(input$main_map_shape_click, {
     data_of_click$clickedGeography <- input$main_map_shape_click
     
@@ -159,22 +189,30 @@ server <- function(input, output, session) {
     
     cat(file=stderr(), "Observed Geography Click", "\n")
     
+    # if(!is.null(data_of_click$clickedGeography$id)){
+    #   right_lay = la_census %>% filter(GEOID==data_of_click$clickedGeography$id)
+    #   cs <- c(right_lay['census'])
+    #   right_lay_g <- c(right_lay_g,cs)
+    #   print(right_lay_g$census)
+    #   updateSelectizeInput(session,"select_tract", 
+    #                     selected=c(right_lay_g,cs))}
     
   })
+  
   
   output$pro <- renderText({
     if(!is.null(data_of_click$clickedGeography$id)){
       right_lay = la_census %>% filter(GEOID==data_of_click$clickedGeography$id)
       HTML(paste(paste0('Census Tract: ',right_lay$census),
                  paste0('Total Population: ',right_lay$total_population),
-                 paste0('# Limited English: ',right_lay$limited_english_totpop), 
-                 paste0('# White Alone: ',right_lay$white_only),
-                 paste0('# African American Alone: ',right_lay$aa_pop),
-                 paste0('# API: ',right_lay$api_pop),
-                 paste0('# Asian Alone: ',right_lay$asian_pop),
-                 paste0('# Latinx Alone: ',right_lay$hispanic_pop),
-                 paste0('# Under 100% Poverty Level: ',right_lay$poverty_number),
-                 paste0('# Renter: ',right_lay$renter_number),
+                 #paste0('# Limited English: ',right_lay$limited_english_totpop), 
+                 paste0('# White Alone%: ',round(right_lay$white_only/right_lay$total_population*100,2)),
+                 paste0('# African American Alone%: ',round(right_lay$aa_pop/right_lay$total_population*100,2)),
+                 paste0('# API%: ',round(right_lay$api_pop/right_lay$total_population*100,2)),
+                 paste0('# Asian Alone%: ',round(right_lay$asian_pop/right_lay$total_population*100,2)),
+                 paste0('# Latinx Alone%: ',round(right_lay$hispanic_pop/right_lay$total_population*100,2)),
+                 #paste0('# Under 100% Poverty Level: ',right_lay$poverty_number),
+                 #paste0('# Renter: ',right_lay$renter_number),
                  paste0('Median Income: ',right_lay$medi_income),sep = '<br/>'))
 
              
@@ -192,31 +230,33 @@ server <- function(input, output, session) {
     if(!is.null(input$select_tract)){
       right_lay = la_census %>% filter(census%in%c(input$select_tract))
       HTML(paste(paste0('Current Boundary Information (Sum)'),
-                 paste0('Total Population: ',sum(dt_census$total_population,right_lay$total_population,na.rm=T)),
-                 paste0('# Limited English: ',sum(dt_census$limited_english_totpop,right_lay$limited_english_totpop,na.rm=T)), 
-                 paste0('# White Alone: ',sum(dt_census$white_only,right_lay$white_only,na.rm=T)),
-                 paste0('# African American Alone: ',sum(dt_census$aa_pop,right_lay$aa_pop,na.rm=T)),
-                 paste0('# API: ',sum(dt_census$api_pop,right_lay$api_pop,na.rm=T)),
-                 paste0('# Asian Alone: ',sum(dt_census$asian_pop,right_lay$asian_pop,na.rm=T)),
-                 paste0('# Latinx Alone: ',sum(dt_census$hispanic_pop,right_lay$hispanic_pop,na.rm=T)),
-                 paste0('# Under 100% Poverty Level: ',sum(dt_census$poverty_number,right_lay$poverty_number,na.rm=T)),
-                 paste0('# Renter: ',sum(dt_census$renter_number,right_lay$renter_number,na.rm=T)),
-                 paste0('Median Income(mean): ',round(sum(dt_census$medi_income,right_lay$medi_income,na.rm=T)/(nrow(dt_census)+nrow(right_lay)),2)),sep = '<br/>'))
+                 paste0('Total Population: ',sum(right_lay$total_population,na.rm=T)),
+                 #paste0('# Limited English: ',sum(dt_census$limited_english_totpop,right_lay$limited_english_totpop,na.rm=T)), 
+                 paste0('% White Alone: ',round(sum(right_lay$white_only,na.rm=T)/sum(right_lay$total_population,na.rm=T)*100,2)),
+                 paste0('% African American Alone: ',round(sum(right_lay$aa_pop,na.rm=T)/sum(right_lay$total_population,na.rm=T)*100,2)),
+                 paste0('% API: ',round(sum(right_lay$api_pop,na.rm=T)/sum(right_lay$total_population,na.rm=T)*100,2)),
+                 paste0('% Asian Alone: ',round(sum(right_lay$asian_pop,na.rm=T)/sum(right_lay$total_population,na.rm=T)*100,2)),
+                 paste0('% Latinx Alone: ',round(sum(right_lay$hispanic_pop,na.rm=T)/sum(right_lay$total_population,na.rm=T)*100,2)),
+                 #paste0('# Under 100% Poverty Level: ',sum(dt_census$poverty_number,right_lay$poverty_number,na.rm=T)),
+                 #paste0('# Renter: ',sum(dt_census$renter_number,right_lay$renter_number,na.rm=T)),
+                 paste0('Median Income(mean): ',round(sum(right_lay$medi_income,na.rm=T)/(nrow(right_lay)),2)),
+                 paste0('# Select Census: ',nrow(right_lay)),sep = '<br/>'))
       
       
     }
     else{
       HTML(paste(paste0('Current Boundary Information (Sum)'),
-                 paste0('Total Population: ',sum(dt_census$total_population,na.rm=T)),
-                 paste0('# Limited English: ',sum(dt_census$limited_english_totpop,na.rm=T)), 
-                 paste0('# White Alone: ',sum(dt_census$white_only,na.rm=T)),
-                 paste0('# African American Alone: ',sum(dt_census$aa_pop,na.rm=T)),
-                 paste0('# API: ',sum(dt_census$api_pop,na.rm=T)),
-                 paste0('# Asian Alone: ',sum(dt_census$asian_pop,na.rm=T)),
-                 paste0('# Latinx Alone: ',sum(dt_census$hispanic_pop,na.rm=T)),
-                 paste0('# Under 100% Poverty Level: ',sum(dt_census$poverty_number,na.rm=T)),
-                 paste0('# Renter: ',sum(dt_census$renter_number,na.rm=T)),
-                 paste0('Median Income(mean): ',round(mean(dt_census$medi_income,na.rm=T),2)),sep = '<br/>'))
+                 paste0('Total Population: ',0),
+                 #paste0('# Limited English: ',sum(dt_census$limited_english_totpop,na.rm=T)), 
+                 paste0('% White Alone: ',0),
+                 paste0('% African American Alone: ',0),
+                 paste0('% API: ',0),
+                 paste0('% Asian Alone: ',0),
+                 paste0('% Latinx Alone: ',0),
+                 #paste0('# Under 100% Poverty Level: ',sum(dt_census$poverty_number,na.rm=T)),
+                 #paste0('# Renter: ',sum(dt_census$renter_number,na.rm=T)),
+                 paste0('Median Income(mean): ',0),
+                 paste0('# Select Census: ',0), sep = '<br/>'))
     }
   })
   
@@ -225,37 +265,38 @@ server <- function(input, output, session) {
                       leafletProxy("main_map") %>%
                         clearGroup('Donwtown') %>%
                         clearGroup("Tract") %>%
-                        addPolygons(data = update_dataset(),
-                                    fillColor = ~quantcolors()(
-                                      if(input$select_layer == 'Total Population'){total_population}
-                                      else if(input$select_layer == '# Limited English'){limited_english_totpop}
-                                      else if(input$select_layer == '# African American Alone'){aa_pop}
-                                      else if(input$select_layer == '# API'){api_pop}
-                                      else if(input$select_layer == '# Asian Alone'){asian_pop}
-                                      else if(input$select_layer == '# Foreign Born'){foreign_born}
-                                      else if(input$select_layer == '# Latix Alone'){hispanic_pop}
-                                      else if(input$select_layer == '# Renter'){renter_number}
-                                      else if(input$select_layer == '# Under 100% Poverty Level'){poverty_number}
-                                      else if(input$select_layer == 'Median Income'){medi_income}
-                                      else if(input$select_layer == '# White Alone'){white_only}),
-                                    group='Tract',
-                                    fillOpacity = 0.7,
-                                    color = "grey",
-                                    weight = 2,
-                                    layerId = ~GEOID,
-                                    popup = ~census,
-                                    options = pathOptions(pane = "Tract"))%>%
+                        # addPolygons(data = update_dataset(),
+                        #             fillColor = ~quantcolors()(
+                        #               if(input$select_layer == 'Total Population'){total_population}
+                        #               else if(input$select_layer == '# Limited English'){limited_english_totpop}
+                        #               else if(input$select_layer == '# African American Alone'){aa_pop}
+                        #               else if(input$select_layer == '# API'){api_pop}
+                        #               else if(input$select_layer == '# Asian Alone'){asian_pop}
+                        #               else if(input$select_layer == '# Foreign Born'){foreign_born}
+                        #               else if(input$select_layer == '# Latix Alone'){hispanic_pop}
+                        #               else if(input$select_layer == '# Renter'){renter_number}
+                        #               else if(input$select_layer == '# Under 100% Poverty Level'){poverty_number}
+                        #               else if(input$select_layer == 'Median Income'){medi_income}
+                        #               else if(input$select_layer == '# White Alone'){white_only}),
+                        #             group='Tract',
+                        #             fillOpacity = 0.7,
+                        #             color = "grey",
+                        #             weight = 2,
+                        #             layerId = ~GEOID,
+                        #             popup = ~census,
+                        #             options = pathOptions(pane = "Tract"))%>%
                         addPolygons(data = update_dataset_census(),
                                    fillColor = ~quantcolors()(
                                      if(input$select_layer == 'Total Population'){total_population}
-                                     else if(input$select_layer == '# Limited English'){limited_english_totpop}
+                                     else if(input$select_layer == 'Nothing'){Nothing}
+                                     #else if(input$select_layer == '# Limited English'){limited_english_totpop}
                                      else if(input$select_layer == '# African American Alone'){aa_pop}
                                      else if(input$select_layer == '# API'){api_pop}
                                      else if(input$select_layer == '# Asian Alone'){asian_pop}
-                                     else if(input$select_layer == '# Foreign Born'){foreign_born}
+                                     #else if(input$select_layer == '# Foreign Born'){foreign_born}
                                      else if(input$select_layer == '# Latix Alone'){hispanic_pop}
-                                     else if(input$select_layer == '# Renter'){renter_number}
-                                     else if(input$select_layer == '# Under 100% Poverty Level'){poverty_number}
+                                     #else if(input$select_layer == '# Renter'){renter_number}
+                                     #else if(input$select_layer == '# Under 100% Poverty Level'){poverty_number}
                                      else if(input$select_layer == 'Median Income'){medi_income}
                                      else if(input$select_layer == '# White Alone'){white_only}),
                                    group='Tract',
