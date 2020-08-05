@@ -5,9 +5,9 @@ account: dtla
 server: shinyapps.io
 hostUrl: https://api.shinyapps.io/v1
 appId: 2618317
-bundleId: 3445011
+bundleId: 3475808
 url: https://yaoyaocai.shinyapps.io/dtla/
-when: 1595923451.62543
+when: 1596586273.64428
 asMultiple: FALSE
 asStatic: FALSE
 ignoredFiles: get_census.R

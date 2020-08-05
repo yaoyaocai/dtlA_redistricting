@@ -41,8 +41,8 @@ ui <- bootstrapPage(
                           leafletOutput("main_map", width="100%", height="100%"),
                           
                           absolutePanel(id = "controls", class = "panel panel-default",
-                                        top = 100, left = 55, width = 470, fixed=TRUE,
-                                        draggable = FALSE, height = 'auto',
+                                        top = 100, left = 55, width = 500, fixed=TRUE,
+                                        draggable = T, height = 'auto',
                                         #img(src="logo.png",height=37,width=110,align = "left"),
                                         pickerInput("select_layer", label = h4("Layer Selection"), inline = F, 
                                                     selected = "Nothing",width='100%',
@@ -56,7 +56,8 @@ ui <- bootstrapPage(
                                                        options = list(maxItems = 9999,placeholder = "Select Tracts", 'plugins' = list('remove_button'))
                                         ),
                                         span(h4(htmlOutput("la_change"), align = "left"), style="color:#270180"),
-                                        span(h6(htmlOutput("author"), align = "left"))
+                                        span(h6(htmlOutput("author"), align = "left")),
+                                        span(h6(htmlOutput("source"), align = "left"))
                                         
                           ),
                           absolutePanel(id = "controls", class = "panel panel-default",
@@ -87,8 +88,8 @@ server <- function(input, output, session) {
       # 
       addMapPane("Council", zIndex = 408)%>%
       addMapPane("Neighborhood", zIndex = 405)%>%
-      addMapPane("Downtown", zIndex = 401)%>%
-      addMapPane("Tract", zIndex = 410) %>%
+      addMapPane("Downtown", zIndex = 402)%>%
+      addMapPane("Tract", zIndex = 401) %>%
       addMapPane("Base Tract", zIndex = 400) %>%# Pane z-Index for polygons to stay underneath the markers
       #
       addLayersControl(
@@ -96,7 +97,7 @@ server <- function(input, output, session) {
         overlayGroups = c('Tract','Council','Neighborhood','Downtown','Base Tract'),
         options = layersControlOptions(collapsed = F, autoZIndex = TRUE),
         position = "bottomright")  %>%
-      hideGroup("Neighborhood") %>%
+      hideGroup(c("Neighborhood",'Council')) %>%
       addPolylines(data = dtla,
                    weight=5,
                    color = 'royalblue',
@@ -196,7 +197,7 @@ server <- function(input, output, session) {
       right_lay = la_census %>% filter(GEOID==data_of_click$clickedGeography$id)
       cs <- c(right_lay['census'])
       right_lay_g <- c(right_lay_g,cs)
-      print(right_lay_g$census)
+      #print(right_lay_g$census)
       st=input$select_tract
       updateSelectizeInput(session,"select_tract",
                         selected=c(st,right_lay_g))
@@ -233,6 +234,10 @@ server <- function(input, output, session) {
   
   output$author <- renderText({
       paste0("Powered by Yaoyao Cai and Cheng Ren")
+    
+  })
+  output$source <- renderText({
+    paste0("Source: ACS 2018")
     
   })
   output$la_change <- renderText({
