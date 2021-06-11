@@ -233,7 +233,7 @@ server <- function(input, output, session) {
     })
   
   output$author <- renderText({
-      paste0("Powered by Yaoyao Cai and Cheng Ren")
+      paste0("Designed by Yaoyao Cai")
     
   })
   output$source <- renderText({
